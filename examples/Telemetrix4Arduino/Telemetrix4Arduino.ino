@@ -64,6 +64,11 @@ extern void set_analog_scanning_interval();
 
 extern void enable_all_reports();
 
+extern void reset_data();
+
+extern void init_pin_structures();
+
+
 // uncomment out the next line to create a 2nd i2c port
 // #define SECOND_I2C_PORT
 
@@ -107,6 +112,7 @@ TwoWire *current_i2c_port;
 #define STOP_ALL_REPORTS 15
 #define SET_ANALOG_SCANNING_INTERVAL 16
 #define ENABLE_ALL_REPORTS 17
+#define RESET 18
 
 // Custom rotary encoder support
 #define ENCODER_NEW 18
@@ -193,7 +199,7 @@ command_descriptor command_table[19] =
 
 // firmware version - update this when bumping the version
 #define FIRMWARE_MAJOR 1
-#define FIRMWARE_MINOR 3
+#define FIRMWARE_MINOR 9
 
 // A buffer to hold i2c report data
 byte i2c_report_message[64];
@@ -421,10 +427,14 @@ void digital_write()
 
 void analog_write()
 {
-  byte pin;
-  byte value;
+  // command_buffer[0] = PIN, command_buffer[1] = value_msb,
+  // command_buffer[2] = value_lsb
+  byte pin; // command_buffer[0]
+  unsigned int value;
+
   pin = command_buffer[0];
-  value = command_buffer[1];
+
+  value = (command_buffer[1] << 8) + command_buffer[2];
   analogWrite(pin, value);
 }
 
@@ -1045,28 +1055,75 @@ void scan_encoders()
   }
 }
 
+void reset_data(){
+    // reset the data structures
+
+    // fist stop all reporting
+    stop_all_reports();
+
+    current_millis = 0;  // for analog input loop
+    previous_millis = 0; // for analog input loop
+    analog_sampling_interval = 19;
+
+    // detach any attached servos
+    for (int i = 0; i < MAX_SERVOS; i++)
+    {
+        if (servos[i].attached() == true)
+        {
+            servos[i].detach();
+        }
+    }
+
+    sonar_current_millis = 0;  // for analog input loop
+    sonar_previous_millis = 0; // for analog input loop
+    sonar_scan_interval = 33;  // Milliseconds between sensor pings
+
+    dht_index = 0; // index into dht struct
+
+    dht_current_millis = 0;      // for analog input loop
+    dht_previous_millis = 0;     // for analog input loop
+    dht_scan_interval = 2000;    // scan dht's every 2 seconds
+
+    // Reset optical encoder timers and index
+    optEncoder_ix = 0;
+    optenc_current_millis = 0;      // for analog input loop
+    optenc_previous_millis = 0;     // for analog input loop
+    optenc_scan_interval = 0; // scan encoders every x ms
+
+    init_pin_structures();
+
+    memset(sonars, 0, sizeof(sonars));
+    memset(dhts, 0, sizeof(dhts));
+    memset(optEnc, 0, sizeof(optEnc));
+    enable_all_reports();
+}
+
+void init_pin_structures(){
+    // create an array of pin_descriptors for 100 pins
+    // establish the digital pin array
+    for (byte i = 0; i < MAX_DIGITAL_PINS_SUPPORTED; i++)
+    {
+        the_digital_pins[i].pin_number = i;
+        the_digital_pins[i].pin_mode = AT_MODE_NOT_SET;
+        the_digital_pins[i].reporting_enabled = false;
+        the_digital_pins[i].last_value = 0;
+    }
+
+    // establish the analog pin array
+    for (byte i = 0; i < MAX_ANALOG_PINS_SUPPORTED; i++)
+    {
+      the_analog_pins[i].pin_number = i;
+      the_analog_pins[i].pin_mode = AT_MODE_NOT_SET;
+      the_analog_pins[i].reporting_enabled = false;
+      the_analog_pins[i].last_value = 0;
+      the_analog_pins[i].differential = 0;
+    }
+}
+
 void setup()
 {
-  // create an array of pin_descriptors for 100 pins
-  // establish the digital pin array
-  for (byte i = 0; i < MAX_DIGITAL_PINS_SUPPORTED; i++)
-  {
-    the_digital_pins[i].pin_number = i;
-    the_digital_pins[i].pin_mode = AT_MODE_NOT_SET;
-    the_digital_pins[i].reporting_enabled = false;
-    the_digital_pins[i].last_value = 0;
-  }
-
-  // establish the analog pin array
-  for (byte i = 0; i < MAX_ANALOG_PINS_SUPPORTED; i++)
-  {
-    the_analog_pins[i].pin_number = i;
-    the_analog_pins[i].pin_mode = AT_MODE_NOT_SET;
-    the_analog_pins[i].reporting_enabled = false;
-    the_analog_pins[i].last_value = 0;
-    the_analog_pins[i].differential = 0;
-  }
   // initialize the servo allocation map table
+  init_pin_structures();
 
   Serial.begin(1000000);
 }
