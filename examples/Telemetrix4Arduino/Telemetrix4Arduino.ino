@@ -1106,7 +1106,7 @@ void init_pin_structures() {
     the_digital_pins[i].pin_number = i;
     the_digital_pins[i].pin_mode = AT_MODE_NOT_SET;
     the_digital_pins[i].reporting_enabled = false;
-    the_digital_pins[i].last_value = 0;
+    the_digital_pins[i].last_value = -1;
   }
 
   // establish the analog pin array
