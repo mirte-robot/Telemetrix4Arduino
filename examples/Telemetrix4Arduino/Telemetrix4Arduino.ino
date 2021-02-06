@@ -70,11 +70,11 @@ extern void init_pin_structures();
 
 
 // uncomment out the next line to create a 2nd i2c port
-// #define SECOND_I2C_PORT
+#define SECOND_I2C_PORT
 
 #ifdef SECOND_I2C_PORT
 // Change the pins to match SDA and SCL for your board
-#define SECOND_I2C_PORT_SDA PB3
+#define SECOND_I2C_PORT_SDA PB11
 #define SECOND_I2C_PORT_SCL PB10
 
 TwoWire Wire2(SECOND_I2C_PORT_SDA, SECOND_I2C_PORT_SCL);
