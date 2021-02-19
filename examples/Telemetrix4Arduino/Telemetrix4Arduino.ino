@@ -545,13 +545,11 @@ void servo_write()
 {
   byte pin = command_buffer[0];
   int angle = command_buffer[1];
-  servos[0].write(angle);
   // find the servo object for the pin
   for (int i = 0; i < MAX_SERVOS; i++)
   {
     if (pin_to_servo_index_map[i] == pin)
     {
-
       servos[i].write(angle);
       return;
     }
