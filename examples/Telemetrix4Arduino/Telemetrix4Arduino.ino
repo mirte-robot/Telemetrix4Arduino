@@ -115,7 +115,7 @@ TwoWire *current_i2c_port;
 #define RESET 18
 
 // Custom rotary encoder support
-#define ENCODER_NEW 18
+#define ENCODER_NEW 19
 
 // When adding a new command update the command_table.
 // The command length is the number of bytes that follow
@@ -132,7 +132,7 @@ struct command_descriptor
 
 // If you add new commands, make sure to extend the siz of this
 // array.
-command_descriptor command_table[19] =
+command_descriptor command_table[20] =
 {
   {&serial_loopback},
   {&set_pin_mode},
@@ -152,7 +152,8 @@ command_descriptor command_table[19] =
   {stop_all_reports},
   {set_analog_scanning_interval},
   {enable_all_reports},
-  &encoder_new
+  {reset_data},
+  {&encoder_new}
 };
 
 // Input pin reporting control sub commands (modify_reporting)
