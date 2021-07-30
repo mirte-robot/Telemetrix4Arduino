@@ -1117,7 +1117,7 @@ void init_pin_structures() {
     the_analog_pins[i].pin_number = i;
     the_analog_pins[i].pin_mode = AT_MODE_NOT_SET;
     the_analog_pins[i].reporting_enabled = false;
-    the_analog_pins[i].last_value = 0;
+    the_analog_pins[i].last_value = -1;
     the_analog_pins[i].differential = 0;
   }
 }
