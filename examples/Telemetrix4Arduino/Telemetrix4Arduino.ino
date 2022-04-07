@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "Telemetrix4Arduino.h"
 #include <Servo.h>
-#include <Ultrasonic.h>
+#include <NewPing.h>
 #include <Wire.h>
 #include <dhtnew.h>
 #include <OpticalEncoder.h>
@@ -294,7 +294,7 @@ struct Sonar
 {
   uint8_t trigger_pin;
   unsigned int last_value;
-  Ultrasonic *usonic;
+  NewPing *usonic;
 };
 
 // an array of sonar objects
@@ -710,8 +710,8 @@ void i2c_write()
 void sonar_new()
 {
   // command_buffer[0] = trigger pin,  command_buffer[1] = echo pin
-  sonars[sonars_index].usonic = new Ultrasonic((uint8_t)command_buffer[0], (uint8_t)command_buffer[1],
-      80000UL);
+  sonars[sonars_index].usonic = new NewPing((uint8_t)command_buffer[0], (uint8_t)command_buffer[1],
+      2000);
   sonars[sonars_index].trigger_pin = command_buffer[0];
   sonars_index++;
 }
@@ -926,7 +926,7 @@ void scan_sonars()
     if (sonar_current_millis - sonar_previous_millis > sonar_scan_interval)
     {
       sonar_previous_millis += sonar_scan_interval;
-      distance = sonars[last_sonar_visited].usonic->read();
+      distance = sonars[last_sonar_visited].usonic->ping() / US_ROUNDTRIP_CM;
       if (distance != sonars[last_sonar_visited].last_value)
       {
         sonars[last_sonar_visited].last_value = distance;
