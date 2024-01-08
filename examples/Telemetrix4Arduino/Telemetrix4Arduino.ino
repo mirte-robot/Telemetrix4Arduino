@@ -584,15 +584,19 @@ void servo_detach()
 void i2c_begin()
 {
   byte i2c_port = command_buffer[0];
-  if (not i2c_port)
+  if (! i2c_port)
   {
     Wire.begin();
+    Wire.setWireTimeout(10,false);
+    Wire.clearWireTimeoutFlag();
   }
 
 #ifdef SECOND_I2C_PORT
   else
   {
     Wire2.begin();
+    Wire2.setWireTimeout(10,false);
+    Wire2.clearWireTimeoutFlag();
   }
 #endif
 }
@@ -694,7 +698,9 @@ void i2c_write()
     current_i2c_port = &Wire2;
   }
 #endif
-
+  if(current_i2c_port->getWireTimeoutFlag()) {
+    return;
+  }
   current_i2c_port->beginTransmission(command_buffer[1]);
 
   // write the data to the device
@@ -703,7 +709,7 @@ void i2c_write()
     current_i2c_port->write(command_buffer[i + 3]);
   }
   current_i2c_port->endTransmission();
-  delayMicroseconds(70);
+  // delayMicroseconds(70);
 }
 
 /***********************************
@@ -799,14 +805,14 @@ void get_next_command()
   memset(command_buffer, 0, sizeof(command_buffer));
 
   // if there is no command waiting, then return
-  if (not Serial.available())
+  if (! Serial.available())
   {
     return;
   }
   // get the packet length
   packet_length = (byte)Serial.read();
 
-  while (not Serial.available())
+  while (! Serial.available())
   {
     delay(1);
   }
@@ -824,7 +830,7 @@ void get_next_command()
     for (int i = 0; i < packet_length - 1; i++)
     {
       // need this delay or data read is not correct
-      while (not Serial.available())
+      while (! Serial.available())
       {
         delay(1);
       }
