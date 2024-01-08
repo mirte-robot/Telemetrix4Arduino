@@ -391,11 +391,13 @@ void set_pin_mode()
     case INPUT:
       the_digital_pins[pin].pin_mode = mode;
       the_digital_pins[pin].reporting_enabled = command_buffer[2];
+      the_digital_pins[pin].last_value = -1;
       pinMode(pin, INPUT);
       break;
     case INPUT_PULLUP:
       the_digital_pins[pin].pin_mode = mode;
       the_digital_pins[pin].reporting_enabled = command_buffer[2];
+      the_digital_pins[pin].last_value = -1;
       pinMode(pin, INPUT_PULLUP);
       break;
     case OUTPUT:
@@ -406,6 +408,7 @@ void set_pin_mode()
       the_analog_pins[pin].pin_mode = mode;
       the_analog_pins[pin].differential = (command_buffer[2] << 8) + command_buffer[3];
       the_analog_pins[pin].reporting_enabled = command_buffer[4];
+      the_analog_pins[pin].last_value = -1;
       break;
     default:
       break;
