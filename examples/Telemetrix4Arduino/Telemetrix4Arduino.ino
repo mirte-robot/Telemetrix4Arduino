@@ -888,7 +888,6 @@ void scan_analog_inputs()
   // byte 4 = low order byte of value
 
   byte report_message[5] = {4, ANALOG_REPORT, 0, 0, 0};
-  send_debug_info(1,1);
   uint8_t adjusted_pin_number;
   int differential;
 
@@ -896,16 +895,12 @@ void scan_analog_inputs()
   if (current_millis - previous_millis > analog_sampling_interval)
   {
     previous_millis += analog_sampling_interval;
-send_debug_info(1,2);
     for (int i = 0; i < MAX_ANALOG_PINS_SUPPORTED; i++)
     {
-      send_debug_info(1,3);
       if (the_analog_pins[i].pin_mode == AT_ANALOG)
       {
-        send_debug_info(1,4);
         if (the_analog_pins[i].reporting_enabled)
         {
-          send_debug_info(1,5);
           // if the value changed since last read
           // adjust pin number for the actual read
           adjusted_pin_number = (uint8_t)(analog_read_pins[i]);
@@ -919,7 +914,6 @@ send_debug_info(1,2);
             report_message[2] = (byte)i;
             report_message[3] = highByte(value); // get high order byte
             report_message[4] = lowByte(value);
-            send_debug_info(1,6);
             Serial.write(report_message, 5);
             delay(1);
           }
