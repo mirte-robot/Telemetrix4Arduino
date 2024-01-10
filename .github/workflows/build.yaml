@@ -16,14 +16,17 @@ jobs:
                     "arduino:avr:nano", 
                     "STM32:stm32:GenF1:pnum=BLUEPILL_F103C8"
                   ]
+            fail-fast: false
         steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
             - name: setup path
               run: |
                 echo "/root/.local/bin" >> $GITHUB_PATH
-                cd /root/
+                mkdir libs
+                cd libs
                 git clone https://github.com/mirte-robot/mirte-arduino-libraries.git
-            - name: Checkout repository
-              uses: actions/checkout@v4
+                cd ..
             - uses: arduino/compile-sketches@v1
               with:
                   cli-version: 0.13.0
@@ -37,7 +40,7 @@ jobs:
                     - name: Stepper
                     - name: DHTNEW
                     - name: NewPing
-                    - source-path: /root/mirte-arduino-libraries/OpticalEncoder
+                    - source-path: ./libs/mirte-arduino-libraries/OpticalEncoder
                     - source-path: ./
                   sketch-paths: examples/
                   verbose: true
