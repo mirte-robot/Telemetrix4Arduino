@@ -587,16 +587,20 @@ void i2c_begin()
   if (! i2c_port)
   {
     Wire.begin();
+#if defined(__AVR_ATmega328P__) 
     Wire.setWireTimeout(10,false);
     Wire.clearWireTimeoutFlag();
+#endif
   }
 
 #ifdef SECOND_I2C_PORT
   else
   {
     Wire2.begin();
+#if defined(__AVR_ATmega328P__) 
     Wire2.setWireTimeout(10,false);
     Wire2.clearWireTimeoutFlag();
+#endif
   }
 #endif
 }
@@ -698,9 +702,12 @@ void i2c_write()
     current_i2c_port = &Wire2;
   }
 #endif
-  if(current_i2c_port->getWireTimeoutFlag()) {
+#if defined(__AVR_ATmega328P__) 
+  if (current_i2c_port->getWireTimeoutFlag())
+  {
     return;
   }
+#endif
   current_i2c_port->beginTransmission(command_buffer[1]);
 
   // write the data to the device
