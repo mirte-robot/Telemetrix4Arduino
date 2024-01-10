@@ -20,9 +20,10 @@ jobs:
             - name: setup path
               run: |
                 echo "/root/.local/bin" >> $GITHUB_PATH
+                cd /root/
                 git clone https://github.com/mirte-robot/mirte-arduino-libraries.git
             - name: Checkout repository
-              uses: actions/checkout@v2
+              uses: actions/checkout@v4
             - uses: arduino/compile-sketches@v1
               with:
                   cli-version: 0.13.0
@@ -36,6 +37,7 @@ jobs:
                     - name: Stepper
                     - name: DHTNEW
                     - name: NewPing
-                    - source-path: ./mirte-arduino-libraries/OpticalEncoder
+                    - source-path: /root/mirte-arduino-libraries/OpticalEncoder
                     - source-path: ./
                   sketch-paths: examples/
+                  verbose: true
