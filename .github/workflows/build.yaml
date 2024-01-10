@@ -12,9 +12,9 @@ jobs:
         strategy:
             matrix:
                 board_fqbn: [
-                    arduino:avr:uno, 
-                    arduino:avr:nano, 
-                    STM32:stm32:GenF1:pnum=BLUEPILL_F103C8
+                    "arduino:avr:uno", 
+                    "arduino:avr:nano", 
+                    "STM32:stm32:GenF1:pnum=BLUEPILL_F103C8"
                   ]
         steps:
             - name: setup path
