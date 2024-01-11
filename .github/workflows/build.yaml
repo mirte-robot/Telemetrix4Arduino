@@ -1,0 +1,46 @@
+name: Arduino Compile
+
+on:
+    push:
+    pull_request:
+        branches:
+            - main
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                board_fqbn: [
+                    "arduino:avr:uno", 
+                    "arduino:avr:nano", 
+                    "STM32:stm32:GenF1:pnum=BLUEPILL_F103C8"
+                  ]
+            fail-fast: false
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: setup path
+              run: |
+                echo "/root/.local/bin" >> $GITHUB_PATH
+                mkdir libs
+                cd libs
+                git clone https://github.com/mirte-robot/mirte-arduino-libraries.git
+                cd ..
+            - uses: arduino/compile-sketches@v1
+              with:
+                  cli-version: 0.13.0
+                  fqbn: "${{ matrix.board_fqbn }}"
+                  platforms: |
+                    - name: STM32:stm32
+                      source-url: https://raw.githubusercontent.com/koendv/stm32duino-raspberrypi/master/BoardManagerFiles/package_stm_index.json
+                    - name: arduino:avr
+                  libraries: |
+                    - name: Servo
+                    - name: Stepper
+                    - name: DHTNEW
+                    - name: NewPing
+                    - source-path: ./libs/mirte-arduino-libraries/OpticalEncoder
+                    - source-path: ./
+                  sketch-paths: examples/
+                  verbose: true
