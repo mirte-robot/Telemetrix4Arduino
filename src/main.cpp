@@ -390,11 +390,13 @@ void set_pin_mode() {
   case INPUT:
     the_digital_pins[pin].pin_mode = mode;
     the_digital_pins[pin].reporting_enabled = command_buffer[2];
+    the_digital_pins[pin].last_value = -1;
     pinMode(pin, INPUT);
     break;
   case INPUT_PULLUP:
     the_digital_pins[pin].pin_mode = mode;
     the_digital_pins[pin].reporting_enabled = command_buffer[2];
+    the_digital_pins[pin].last_value = -1;
     pinMode(pin, INPUT_PULLUP);
     break;
   case OUTPUT:
@@ -406,6 +408,7 @@ void set_pin_mode() {
     the_analog_pins[pin].differential =
         (command_buffer[2] << 8) + command_buffer[3];
     the_analog_pins[pin].reporting_enabled = command_buffer[4];
+    the_analog_pins[pin].last_value = -1;
     break;
   default:
     break;
@@ -564,11 +567,19 @@ void i2c_begin() {
   byte i2c_port = command_buffer[0];
   if (!i2c_port) {
     Wire.begin();
+#if defined(__AVR_ATmega328P__)
+    Wire.setWireTimeout(10, false);
+    Wire.clearWireTimeoutFlag();
+#endif
   }
 
 #ifdef SECOND_I2C_PORT
   else {
     Wire2.begin();
+#if defined(__AVR_ATmega328P__)
+    Wire2.setWireTimeout(10, false);
+    Wire2.clearWireTimeoutFlag();
+#endif
   }
 #endif
 }
@@ -662,7 +673,11 @@ void i2c_write() {
     current_i2c_port = &Wire2;
   }
 #endif
-
+#if defined(__AVR_ATmega328P__)
+  if (current_i2c_port->getWireTimeoutFlag()) {
+    return;
+  }
+#endif
   current_i2c_port->beginTransmission(command_buffer[1]);
 
   // write the data to the device
@@ -670,7 +685,7 @@ void i2c_write() {
     current_i2c_port->write(command_buffer[i + 3]);
   }
   current_i2c_port->endTransmission();
-  delayMicroseconds(70);
+  // delayMicroseconds(70);
 }
 
 /***********************************
@@ -831,14 +846,12 @@ void scan_analog_inputs() {
   // byte 4 = low order byte of value
 
   byte report_message[5] = {4, ANALOG_REPORT, 0, 0, 0};
-
   uint8_t adjusted_pin_number;
   int differential;
 
   current_millis = millis();
   if (current_millis - previous_millis > analog_sampling_interval) {
     previous_millis += analog_sampling_interval;
-
     for (int i = 0; i < MAX_ANALOG_PINS_SUPPORTED; i++) {
       if (the_analog_pins[i].pin_mode == AT_ANALOG) {
         if (the_analog_pins[i].reporting_enabled) {

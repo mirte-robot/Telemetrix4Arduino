@@ -1,0 +1,38 @@
+name: Arduino Compile
+
+on:
+    push:
+    pull_request:
+        branches:
+            - main
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                board_fqbn: [
+                    "nanoatmega328new", 
+                    "robotdyn_blackpill_f303cc", 
+                    "nanoatmega328",
+                    "adafruit_itsybitsy_m4",
+                    "program_via_AVRISP_mkII"
+                  ]
+            fail-fast: false
+          
+        steps:
+        - uses: actions/checkout@v4
+          with:
+            submodules: 'true'
+        - name: Set up Python
+          uses: actions/setup-python@v5
+        - name: Install dependencies
+          run: |
+            python -m pip install --upgrade pip
+            pip install platformio
+        # It is important to first install the libraries before compiling, since otherwise compilation might fail to find the just-installed libraries
+        - name: Install platformIO libraries
+          run: pio pkg install -e ${{ matrix.board_fqbn }}
+        - name: Run PlatformIO
+          run: platformio run -e ${{ matrix.board_fqbn }}
+          
