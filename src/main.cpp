@@ -1,16 +1,8 @@
 #include "Telemetrix4Arduino.h"
-#if defined(__SAMD51__)
-// The servo library does not yet support the M4
-#define ENABLE_SERVO 0
-#else
-#define ENABLE_SERVO 1
-#endif
 #include <Arduino.h>
 #include <NewPing.h>
 #include <OpticalEncoder.h>
-#if ENABLE_SERVO
 #include <Servo.h>
-#endif
 #include <Wire.h>
 #include <dhtnew.h>
 /*
@@ -288,12 +280,10 @@ unsigned long previous_millis; // for analog input loop
 uint8_t analog_sampling_interval = 19;
 
 // servo management
-#if ENABLE_SERVO
 Servo servos[MAX_SERVOS];
 // this array allows us to retrieve the servo object
 // associated with a specific pin number
 byte pin_to_servo_index_map[MAX_SERVOS];
-#endif
 
 // HC-SR04 Sonar Management
 #define MAX_SONARS 6
@@ -493,7 +483,6 @@ void are_you_there() {
 // Find the first servo that is not attached to a pin
 // This is a helper function not called directly via the API
 int find_servo() {
-#if ENABLE_SERVO
   int index = -1;
   for (int i = 0; i < MAX_SERVOS; i++) {
     if (servos[i].attached() == false) {
@@ -502,12 +491,9 @@ int find_servo() {
     }
   }
   return index;
-#endif
-  return -1;
 }
 
 void servo_attach() {
-#if ENABLE_SERVO
   byte pin = command_buffer[0];
   int servo_found = -1;
 
@@ -524,12 +510,10 @@ void servo_attach() {
     byte report_message[2] = {SERVO_UNAVAILABLE, pin};
     Serial.write(report_message, 2);
   }
-#endif
 }
 
 // set a servo to a given angle
 void servo_write() {
-#if ENABLE_SERVO
   byte pin = command_buffer[0];
   int angle = command_buffer[1];
   // find the servo object for the pin
@@ -540,12 +524,10 @@ void servo_write() {
       return;
     }
   }
-#endif
 }
 
 // detach a servo and make it available for future use
 void servo_detach() {
-#if ENABLE_SERVO
   byte pin = command_buffer[0];
 
   // find the servo object for the pin
@@ -556,7 +538,6 @@ void servo_detach() {
       servos[i].detach();
     }
   }
-#endif
 }
 
 /***********************************
@@ -1014,14 +995,13 @@ void reset_data() {
   current_millis = 0;  // for analog input loop
   previous_millis = 0; // for analog input loop
   analog_sampling_interval = 19;
-#if ENABLE_SERVO
+  
   // detach any attached servos
   for (int i = 0; i < MAX_SERVOS; i++) {
     if (servos[i].attached() == true) {
       servos[i].detach();
     }
   }
-#endif
   sonars_index = 0; // reset the index into the sonars array
 
   sonar_current_millis = 0;  // for analog input loop
