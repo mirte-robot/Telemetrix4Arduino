@@ -995,7 +995,7 @@ void reset_data() {
   current_millis = 0;  // for analog input loop
   previous_millis = 0; // for analog input loop
   analog_sampling_interval = 19;
-  
+
   // detach any attached servos
   for (int i = 0; i < MAX_SERVOS; i++) {
     if (servos[i].attached() == true) {
