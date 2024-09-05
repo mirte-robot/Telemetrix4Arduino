@@ -399,7 +399,9 @@ void digital_write() {
   digitalWrite(pin, value);
 }
 
-void analog_write() {
+void pwm_write() {
+  // [PWM_WRITE = 3, pin, value_high, value_low]
+
   // command_buffer[0] = PIN, command_buffer[1] = value_msb,
   // command_buffer[2] = value_lsb
   byte pin; // command_buffer[0]
