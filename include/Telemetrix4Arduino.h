@@ -1,9 +1,10 @@
-#ifndef _TELEMETRIX4ARDUINO_H_
-#define _TELEMETRIX4ARDUINO_H_
+#pragma once
+#include <Arduino.h>
+#include <array>
+// maximum length of a command in bytes
+#define MAX_COMMAND_LENGTH 30
 
-class Telemetrix4Arduino {
+extern uint8_t command_buffer[MAX_COMMAND_LENGTH];
 
-public:
-};
-
-#endif //_TELEMETRIX4ARDUINO_H_
+template <size_t N>
+void send_message(const std::array<uint8_t, N> &message);

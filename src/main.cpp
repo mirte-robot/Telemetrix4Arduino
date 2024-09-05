@@ -1,10 +1,14 @@
-#include "Telemetrix4Arduino.h"
+// #include "Telemetrix4Arduino.h"
 #include <Arduino.h>
+#include "Telemetrix4Arduino.h"
 #include <NewPing.h>
 #include <OpticalEncoder.h>
 #include <Servo.h>
 #include <Wire.h>
 #include <dhtnew.h>
+#include <vector>
+#include "commands.hpp"
+#include "i2c.hpp"
 /*
   Copyright (c) 2020 Alan Yorinks All rights reserved.
 
@@ -25,48 +29,11 @@
 // We define these here to provide a forward reference.
 // If you add a new command, you must add the command handler
 // here as well.
+#include "main.hpp"
 
-extern void serial_loopback();
-
-extern void set_pin_mode();
-
-extern void digital_write();
-
-extern void analog_write();
-
-extern void modify_reporting();
-
-extern void get_firmware_version();
-
-extern void are_you_there();
-
-extern void servo_attach();
-
-extern void servo_write();
-
-extern void servo_detach();
-
-extern void i2c_begin();
-
-extern void i2c_read();
-
-extern void i2c_write();
-
-extern void sonar_new();
-
-extern void dht_new();
-
-extern void encoder_new();
-
-extern void stop_all_reports();
-
-extern void set_analog_scanning_interval();
-
-extern void enable_all_reports();
-
-extern void reset_data();
-
-extern void init_pin_structures();
+#include <array>
+template <size_t T>
+void send_message(const std::array<uint8_t, T> &message);
 
 // uncomment out the next line to create a 2nd i2c port
 //#define SECOND_I2C_PORT
@@ -79,78 +46,84 @@ extern void init_pin_structures();
 TwoWire Wire2(SECOND_I2C_PORT_SDA, SECOND_I2C_PORT_SCL);
 #endif
 
-// a pointer to an active TwoWire object
-TwoWire *current_i2c_port;
-
 // This value must be the same as specified when instantiating the
 // telemetrix client. The client defaults to a value of 1.
 // This value is used for the client to auto-discover and to
 // connect to a specific board regardless of the current com port
 // it is currently connected to.
 #define ARDUINO_ID 1
-
-// Commands -received by this sketch
-// Add commands retaining the sequential numbering.
-// The order of commands here must be maintained in the command_table.
-#define SERIAL_LOOP_BACK 0
-#define SET_PIN_MODE 1
-#define DIGITAL_WRITE 2
-#define ANALOG_WRITE 3
-
-// mode(all, analog, or digital), pin, enable or disable
-#define MODIFY_REPORTING 4
-#define GET_FIRMWARE_VERSION 5
-#define ARE_U_THERE 6
-#define SERVO_ATTACH 7
-#define SERVO_WRITE 8
-#define SERVO_DETACH 9
-#define I2C_BEGIN 10
-#define I2C_READ 11
-#define I2C_WRITE 12
-#define SONAR_NEW 13
-#define DHT_NEW 14
-#define STOP_ALL_REPORTS 15
-#define SET_ANALOG_SCANNING_INTERVAL 16
-#define ENABLE_ALL_REPORTS 17
-#define RESET 18
-
-// Custom rotary encoder support
-#define ENCODER_NEW 19
+ 
 
 // When adding a new command update the command_table.
 // The command length is the number of bytes that follow
 // the command byte itself, and does not include the command
 // byte in its length.
 // The command_func is a pointer the command's function.
-struct command_descriptor {
-  // a pointer to the command processing function
-  void (*command_func)(void);
-};
-
-// An array of pointers to the command functions
-
+// using command_descriptor = void *(void);
+typedef void (*command_descriptor)();
+// not implemented functions
+auto pwm_write = nullptr;
+// auto get_unique_id = nullptr;
+auto reset_board = nullptr;
+auto init_neo_pixels = nullptr;
+auto show_neo_pixels = nullptr;
+auto set_neo_pixel = nullptr;
+auto clear_all_neo_pixels = nullptr;
+auto fill_neo_pixels = nullptr;
+auto init_spi = nullptr;
+auto write_blocking_spi = nullptr;
+auto read_blocking_spi = nullptr;
+auto set_format_spi = nullptr;
+auto spi_cs_control = nullptr;
+auto set_scan_delay = nullptr;
+auto sensor_new = nullptr;
+auto ping = nullptr;
+auto module_new = nullptr;
+auto module_data = nullptr;
+auto get_id = nullptr;
+auto set_id = nullptr;
 // If you add new commands, make sure to extend the siz of this
 // array.
-command_descriptor command_table[20] = {{&serial_loopback},
-                                        {&set_pin_mode},
-                                        {&digital_write},
-                                        {&analog_write},
-                                        {&modify_reporting},
-                                        {&get_firmware_version},
-                                        {&are_you_there},
-                                        {&servo_attach},
-                                        {&servo_write},
-                                        {&servo_detach},
-                                        {&i2c_begin},
-                                        {&i2c_read},
-                                        {&i2c_write},
-                                        {&sonar_new},
-                                        {dht_new},
-                                        {stop_all_reports},
-                                        {set_analog_scanning_interval},
-                                        {enable_all_reports},
-                                        {reset_data},
-                                        {&encoder_new}};
+std::vector<command_descriptor> command_table = {
+                                      {&serial_loopback}, // 0
+                                      {&set_pin_mode}, // 1
+                                      {&digital_write}, // 2, checked
+                                      {pwm_write }, // 3
+                                      {&modify_reporting}, // 4, checked
+                                      {&get_firmware_version}, // 5, checked
+                                      {&get_unique_id}, // 6, checked
+                                      {&servo_attach}, // 7
+                                      {&servo_write}, // 8
+                                      {&servo_detach}, // 9
+                                      {&i2c_begin},
+                                      {&i2c_read},
+                                      {&i2c_write},
+                                      {&sonar_new}, // 13, checked
+                                      {&dht_new},
+                                      {&stop_all_reports}, // 15, checked
+                                      {&enable_all_reports}, // 16, checked
+                                      {&reset_data},
+                                      {reset_board},
+                                      {init_neo_pixels},
+                                      {show_neo_pixels},
+                                      {set_neo_pixel},
+                                      {clear_all_neo_pixels},
+                                      {fill_neo_pixels},
+                                      {init_spi},
+                                      {write_blocking_spi},
+                                      {read_blocking_spi},
+                                      {set_format_spi},
+                                      {spi_cs_control},
+                                      {set_scan_delay},
+                                      {encoder_new}, // 30, checked
+                                      {sensor_new},
+                                      {ping}, // 32,  checked, not impelemented
+                                      {module_new},
+                                      {module_data},
+                                      {get_id},
+                                      {set_id},
+                                      {&feature_detection}
+                                      };
 
 // Input pin reporting control sub commands (modify_reporting)
 #define REPORTING_DISABLE_ALL 0
@@ -159,8 +132,6 @@ command_descriptor command_table[20] = {{&serial_loopback},
 #define REPORTING_ANALOG_DISABLE 3
 #define REPORTING_DIGITAL_DISABLE 4
 
-// maximum length of a command in bytes
-#define MAX_COMMAND_LENGTH 30
 
 // Pin mode definitions
 
@@ -168,27 +139,27 @@ command_descriptor command_table[20] = {{&serial_loopback},
 // OUTPUT defined in Arduino.h = 1
 // INPUT_PULLUP defined in Arduino.h = 2
 // The following are defined for arduino_telemetrix (AT)
-#define AT_ANALOG 3
-#define AT_MODE_NOT_SET 255
+// #define AT_ANALOG 3
+// #define NOT_SET 255
 
 // maximum number of pins supported
 #define MAX_DIGITAL_PINS_SUPPORTED 100
 #define MAX_ANALOG_PINS_SUPPORTED 15
 
 // Reports - sent from this sketch
-#define DIGITAL_REPORT DIGITAL_WRITE
-#define ANALOG_REPORT ANALOG_WRITE
-#define FIRMWARE_REPORT 5
-#define I_AM_HERE 6
-#define SERVO_UNAVAILABLE 7
-#define I2C_TOO_FEW_BYTES_RCVD 8
-#define I2C_TOO_MANY_BYTES_RCVD 9
-#define I2C_READ_REPORT 10
-#define SONAR_DISTANCE 11
-#define DHT_REPORT 12
-#define DEBUG_PRINT 99
+// #define DIGITAL_REPORT DIGITAL_WRITE
+// #define ANALOG_REPORT ANALOG_WRITE
+// #define FIRMWARE_REPORT 5
+// #define I_AM_HERE 6
+// #define SERVO_UNAVAILABLE 7
+// #define I2C_TOO_FEW_BYTES_RCVD 8
+// #define I2C_TOO_MANY_BYTES_RCVD 9
+// #define I2C_READ_REPORT 10
+// #define SONAR_DISTANCE 11
+// #define DHT_REPORT 12
+// #define DEBUG_PRINT 99
 
-#define ENCODER_REPORT 13
+// #define ENCODER_REPORT 13
 
 // DHT Report sub-types
 #define DHT_DATA 0
@@ -254,7 +225,7 @@ int analog_read_pins[20] = {A0, A1, A2,  A3,  A4,  A5,  A6,  A7,
 // a descriptor for digital pins
 struct pin_descriptor {
   byte pin_number;
-  byte pin_mode;
+  PIN_MODES pin_mode;
   bool reporting_enabled; // If true, then send reports if an input pin
   int last_value;         // Last value read for input mode
 };
@@ -265,7 +236,7 @@ pin_descriptor the_digital_pins[MAX_DIGITAL_PINS_SUPPORTED];
 // a descriptor for digital pins
 struct analog_pin_descriptor {
   byte pin_number;
-  byte pin_mode;
+  PIN_MODES pin_mode;
   bool reporting_enabled; // If true, then send reports if an input pin
   int last_value;         // Last value read for input mode
   int differential;       // difference between current and last value needed
@@ -353,7 +324,7 @@ unsigned long optenc_previous_millis;  // for analog input loop
 unsigned int optenc_scan_interval = 0; // scan encoders every x ms
 
 // buffer to hold incoming command data
-byte command_buffer[MAX_COMMAND_LENGTH];
+uint8_t command_buffer[MAX_COMMAND_LENGTH];
 
 // A method to send debug data across the serial link
 void send_debug_info(byte id, int value) {
@@ -372,34 +343,45 @@ void serial_loopback() {
 
 void set_pin_mode() {
   byte pin;
-  byte mode;
+  PIN_MODES mode;
   pin = command_buffer[0];
-  mode = command_buffer[1];
+  mode = (PIN_MODES)command_buffer[1];
 
   switch (mode) {
-  case INPUT:
+  case INPUT_PULL_DOWN:
+    the_digital_pins[pin].pin_mode = mode;
+    the_digital_pins[pin].reporting_enabled = command_buffer[2];
+    the_digital_pins[pin].last_value = -1;
+    #ifndef INPUT_PULLDOWN // for boards that do not support INPUT_PULLDOWN, fall back to INPUT
+    #define INPUT_PULLDOWN INPUT
+    #endif
+    pinMode(pin, INPUT_PULLDOWN);
+    break;  case INPUT_MODE: //[SET_PIN_MODE = 1, pin, digital_in_type, report_enable]
     the_digital_pins[pin].pin_mode = mode;
     the_digital_pins[pin].reporting_enabled = command_buffer[2];
     the_digital_pins[pin].last_value = -1;
     pinMode(pin, INPUT);
     break;
-  case INPUT_PULLUP:
+  case INPUT_PULL_UP:
     the_digital_pins[pin].pin_mode = mode;
     the_digital_pins[pin].reporting_enabled = command_buffer[2];
     the_digital_pins[pin].last_value = -1;
     pinMode(pin, INPUT_PULLUP);
     break;
-  case OUTPUT:
+  case OUTPUT_MODE:
     the_digital_pins[pin].pin_mode = mode;
     pinMode(pin, OUTPUT);
     break;
-  case AT_ANALOG:
+  case ANALOG_INPUT: // [SET_PIN_MODE = 1, adc_pin, ANALOG_IN = 5, diff_high, diff_low, report_enable ]
     the_analog_pins[pin].pin_mode = mode;
     the_analog_pins[pin].differential =
         (command_buffer[2] << 8) + command_buffer[3];
     the_analog_pins[pin].reporting_enabled = command_buffer[4];
     the_analog_pins[pin].last_value = -1;
     break;
+  case PWM:
+
+  break;
   default:
     break;
   }
@@ -430,6 +412,8 @@ void analog_write() {
 }
 
 void modify_reporting() {
+  // [MODIFY_REPORTING = 4, modify_type, pin]
+
   int pin = command_buffer[1];
 
   switch (command_buffer[0]) {
@@ -442,22 +426,22 @@ void modify_reporting() {
     }
     break;
   case REPORTING_ANALOG_ENABLE:
-    if (the_analog_pins[pin].pin_mode != AT_MODE_NOT_SET) {
+    if (the_analog_pins[pin].pin_mode != NOT_SET) {
       the_analog_pins[pin].reporting_enabled = true;
     }
     break;
   case REPORTING_ANALOG_DISABLE:
-    if (the_analog_pins[pin].pin_mode != AT_MODE_NOT_SET) {
+    if (the_analog_pins[pin].pin_mode != NOT_SET) {
       the_analog_pins[pin].reporting_enabled = false;
     }
     break;
   case REPORTING_DIGITAL_ENABLE:
-    if (the_digital_pins[pin].pin_mode != AT_MODE_NOT_SET) {
+    if (the_digital_pins[pin].pin_mode != NOT_SET) {
       the_digital_pins[pin].reporting_enabled = true;
     }
     break;
   case REPORTING_DIGITAL_DISABLE:
-    if (the_digital_pins[pin].pin_mode != AT_MODE_NOT_SET) {
+    if (the_digital_pins[pin].pin_mode != NOT_SET) {
       the_digital_pins[pin].reporting_enabled = false;
     }
     break;
@@ -471,10 +455,10 @@ void get_firmware_version() {
   Serial.write(report_message, 4);
 }
 
-void are_you_there() {
-  byte report_message[3] = {2, I_AM_HERE, ARDUINO_ID};
-  Serial.write(report_message, 3);
-}
+// void are_you_there() {
+//   byte report_message[3] = {2, I_AM_HERE, ARDUINO_ID};
+//   Serial.write(report_message, 3);
+// }
 
 /***************************************************
    Servo Commands
@@ -541,144 +525,19 @@ void servo_detach() {
 }
 
 /***********************************
-   i2c functions
- **********************************/
-
-void i2c_begin() {
-  byte i2c_port = command_buffer[0];
-  if (!i2c_port) {
-    Wire.begin();
-#if defined(__AVR_ATmega328P__)
-    Wire.setWireTimeout(10, false);
-    Wire.clearWireTimeoutFlag();
-#endif
-  }
-
-#ifdef SECOND_I2C_PORT
-  else {
-    Wire2.begin();
-#if defined(__AVR_ATmega328P__)
-    Wire2.setWireTimeout(10, false);
-    Wire2.clearWireTimeoutFlag();
-#endif
-  }
-#endif
-}
-
-void i2c_read() {
-  // data in the incoming message:
-  // address, [0]
-  // register, [1]
-  // number of bytes, [2]
-  // stop transmitting flag [3]
-  // i2c port [4]
-
-  int message_size = 0;
-  byte address = command_buffer[0];
-  byte the_register = command_buffer[1];
-
-  // set the current i2c port if this is for the primary i2c
-  if (command_buffer[4] == 0) {
-    current_i2c_port = &Wire;
-  }
-
-#ifdef SECOND_I2C_PORT
-  // this is for port 2
-  if (command_buffer[4] == 1) {
-    current_i2c_port = &Wire2;
-  }
-#endif
-
-  current_i2c_port->beginTransmission(address);
-  current_i2c_port->write((byte)the_register);
-  current_i2c_port->endTransmission(command_buffer[3]); // default = true
-  current_i2c_port->requestFrom(
-      address, command_buffer[2]); // all bytes are returned in requestFrom
-
-  // check to be sure correct number of bytes were returned by slave
-  if (command_buffer[2] < current_i2c_port->available()) {
-    byte report_message[4] = {3, I2C_TOO_FEW_BYTES_RCVD, 1, address};
-    Serial.write(report_message, 4);
-    return;
-  } else if (command_buffer[2] > current_i2c_port->available()) {
-    byte report_message[4] = {3, I2C_TOO_MANY_BYTES_RCVD, 1, address};
-    Serial.write(report_message, 4);
-    return;
-  }
-
-  // packet length
-  i2c_report_message[0] = command_buffer[2] + 5;
-
-  // report type
-  i2c_report_message[1] = I2C_READ_REPORT;
-
-  // i2c_port
-  i2c_report_message[2] = command_buffer[4];
-
-  // number of bytes read
-  i2c_report_message[3] = command_buffer[2]; // number of bytes
-
-  // device address
-  i2c_report_message[4] = address;
-
-  // device register
-  i2c_report_message[5] = the_register;
-
-  // append the data that was read
-  for (message_size = 0;
-       message_size < command_buffer[2] && current_i2c_port->available();
-       message_size++) {
-    i2c_report_message[6 + message_size] = current_i2c_port->read();
-  }
-  // send slave address, register and received bytes
-
-  for (int i = 0; i < message_size + 6; i++) {
-    Serial.write(i2c_report_message[i]);
-  }
-}
-
-void i2c_write() {
-  // command_buffer[0] is the number of bytes to send
-  // command_buffer[1] is the device address
-  // command_buffer[2] is the i2c port
-  // additional bytes to write= command_buffer[3..];
-
-  // set the current i2c port if this is for the primary i2c
-  if (command_buffer[2] == 0) {
-    current_i2c_port = &Wire;
-  }
-
-#ifdef SECOND_I2C_PORT
-  // this is for port 2
-  if (command_buffer[2] == 1) {
-    current_i2c_port = &Wire2;
-  }
-#endif
-#if defined(__AVR_ATmega328P__)
-  if (current_i2c_port->getWireTimeoutFlag()) {
-    return;
-  }
-#endif
-  current_i2c_port->beginTransmission(command_buffer[1]);
-
-  // write the data to the device
-  for (int i = 0; i < command_buffer[0]; i++) {
-    current_i2c_port->write(command_buffer[i + 3]);
-  }
-  current_i2c_port->endTransmission();
-  // delayMicroseconds(70);
-}
-
-/***********************************
    HC-SR04 adding a new device
  **********************************/
 
 void sonar_new() {
-  // command_buffer[0] = trigger pin,  command_buffer[1] = echo pin
+  // [SONAR_NEW = 13, trigger_pin, echo_pin]
+  if(sonars_index >= MAX_SONARS) {
+    return;
+  }
   sonars[sonars_index].usonic =
-      new NewPing((uint8_t)command_buffer[0], (uint8_t)command_buffer[1], 2000);
+      new NewPing((uint8_t)command_buffer[0], (uint8_t)command_buffer[1], 400);
   sonars[sonars_index].trigger_pin = command_buffer[0];
-  sonars_index++;
+  sonars_index++; // next index, so it is the number of sonars
+  sonar_scan_interval = 100/sonars_index; // always scan all sonars in 100ms
 }
 
 /***********************************
@@ -722,28 +581,29 @@ void dht_new() {
    Adding a new encoder device
  **********************************/
 void encoder_new() {
+  // [ENCODER_NEW = 30, encoder_type, pin_A, pin_B]
+  // TODO: encoder_type is ignored for now, only single encoder for now.
+  // TODO: convert this to a time triggered encoder system.
   // create new encoder object and get interrupt calback method from map
+  auto pinA = command_buffer[1];
   optEnc[optEncoder_ix].optEnc_sensor = new OpticalEncoder();
   intCB callbackMethod = interruptMap[optEncoder_ix];
-
-  // command_buffer[0] = encoder pin,  command_buffer[1] = Interrupt trigger
-  // mode,  command_buffer[2] = nr of ticks per rotation
   optEnc[optEncoder_ix].optEnc_sensor->setup(
-      command_buffer[0], callbackMethod, command_buffer[1], command_buffer[2]);
-  optEnc[optEncoder_ix].pin = command_buffer[0];
+      pinA, callbackMethod, 0, 0);
+  optEnc[optEncoder_ix].pin = pinA;
   optEncoder_ix++;
 }
 
 void stop_all_reports() {
   stop_reports = true;
-  delay(20);
-  Serial.flush();
+  // delay(20);
+  // Serial.flush();
 }
 
 void enable_all_reports() {
-  Serial.flush();
+  // Serial.flush();
   stop_reports = false;
-  delay(20);
+  // delay(20);
 }
 
 void get_next_command() {
@@ -768,8 +628,16 @@ void get_next_command() {
   // get the command byte
   command = (byte)Serial.read();
 
-  // uncomment the next line to see the packet length and command
-  // send_debug_info(packet_length, command);
+  if(command >= command_table.size()) { // discard the command
+    for(auto i = 0; i < packet_length - 1; i++) {
+      while (!Serial.available()) {
+        delay(1);
+      }
+      Serial.read();
+    }
+    // TODO: send a message to the client that the command is not supported
+    return;
+  }
   command_entry = command_table[command];
 
   if (packet_length > 1) {
@@ -784,7 +652,7 @@ void get_next_command() {
       // send_debug_info(i, command_buffer[i]);
     }
   }
-  command_entry.command_func();
+  command_entry();
 }
 
 void scan_digital_inputs() {
@@ -792,15 +660,13 @@ void scan_digital_inputs() {
 
   // report message
 
-  // byte 0 = packet length
-  // byte 1 = report type
-  // byte 2 = pin number
-  // byte 3 = value
+  // [DIGITAL_REPORT = 2, pin, value]
+
   byte report_message[4] = {3, DIGITAL_REPORT, 0, 0};
 
   for (int i = 0; i < MAX_DIGITAL_PINS_SUPPORTED; i++) {
-    if (the_digital_pins[i].pin_mode == INPUT ||
-        the_digital_pins[i].pin_mode == INPUT_PULLUP) {
+    if (the_digital_pins[i].pin_mode == INPUT_MODE ||
+        the_digital_pins[i].pin_mode == INPUT_PULL_UP || the_digital_pins[i].pin_mode == INPUT_PULL_DOWN) {
       if (the_digital_pins[i].reporting_enabled) {
         // if the value changed since last read
         value = (byte)digitalRead(the_digital_pins[i].pin_number);
@@ -825,6 +691,8 @@ void scan_analog_inputs() {
   // byte 2 = pin number
   // byte 3 = high order byte of value
   // byte 4 = low order byte of value
+  // [ANALOG_REPORT = 3, adc_pin, value_high, value_low]
+
 
   byte report_message[5] = {4, ANALOG_REPORT, 0, 0, 0};
   uint8_t adjusted_pin_number;
@@ -834,7 +702,7 @@ void scan_analog_inputs() {
   if (current_millis - previous_millis > analog_sampling_interval) {
     previous_millis += analog_sampling_interval;
     for (int i = 0; i < MAX_ANALOG_PINS_SUPPORTED; i++) {
-      if (the_analog_pins[i].pin_mode == AT_ANALOG) {
+      if (the_analog_pins[i].pin_mode == ANALOG_INPUT) {
         if (the_analog_pins[i].reporting_enabled) {
           // if the value changed since last read
           // adjust pin number for the actual read
@@ -868,14 +736,11 @@ void scan_sonars() {
       if (distance != sonars[last_sonar_visited].last_value) {
         sonars[last_sonar_visited].last_value = distance;
 
-        // byte 0 = packet length
-        // byte 1 = report type
-        // byte 2 = trigger pin number
-        // byte 3 = distance high order byte
-        // byte 4 = distance low order byte
+        // [SONAR_REPORT = 11, trigger_pin, distance_m, distance_cm]
+
         byte report_message[5] = {
             4, SONAR_DISTANCE, sonars[last_sonar_visited].trigger_pin,
-            (byte)(distance >> 8), (byte)(distance & 0xff)};
+            (byte)(distance/100), (byte)(distance % 100)};
         Serial.write(report_message, 5);
       }
       last_sonar_visited++;
@@ -953,36 +818,27 @@ void scan_dhts() {
 }
 
 void scan_encoders() {
-  // byte 0 = packet length
-  // byte 1 = report type
-  // byte 2 = pin number
-  // byte 3 = encoder ticks high order byte for data or error value
-  // byte 4 = encoder ticks byte 2
-  // byte 5 = encoder ticks byte 3
-  // byte 6 = encoder ticks byte 4
-  byte report_message[7] = {6, ENCODER_REPORT, 0, 0, 0, 0, 0};
+  // [ENCODER_REPORT = 14, pin_A, steps]
+
+  byte report_message[4] = {3, ENCODER_REPORT, 0, 0};
 
   long optEnc_return_val = 0;
 
   if (optEncoder_ix) {
-    optenc_current_millis = millis();
-    if (optenc_current_millis - optenc_previous_millis > optenc_scan_interval) {
-      optenc_previous_millis += optenc_scan_interval;
-
+  
       for (int i = 0; i < optEncoder_ix; ++i) {
-        optEnc_return_val = optEnc[i].optEnc_sensor->getPosition();
+        auto enc = optEnc[i].optEnc_sensor;
+        optEnc_return_val = enc->getPosition();
 
-        if (optEnc_return_val != optEnc[i].last_value) {
-          optEnc[i].last_value = optEnc_return_val;
-          report_message[2] = optEnc[i].pin;
+        if (optEnc_return_val != 0) {
+          enc->resetPosition();
+           report_message[2] = optEnc[i].pin;
+            report_message[3] = optEnc_return_val & 0xFF;
 
-          // copy bytes to message
-          memcpy(&report_message[3], &optEnc_return_val,
-                 sizeof optEnc_return_val);
-          Serial.write(report_message, 7);
+          Serial.write(report_message, 4);
         }
       }
-    }
+    
   }
 }
 
@@ -1033,7 +889,7 @@ void init_pin_structures() {
   // establish the digital pin array
   for (byte i = 0; i < MAX_DIGITAL_PINS_SUPPORTED; i++) {
     the_digital_pins[i].pin_number = i;
-    the_digital_pins[i].pin_mode = AT_MODE_NOT_SET;
+    the_digital_pins[i].pin_mode = NOT_SET;
     the_digital_pins[i].reporting_enabled = false;
     the_digital_pins[i].last_value = -1;
   }
@@ -1041,7 +897,7 @@ void init_pin_structures() {
   // establish the analog pin array
   for (byte i = 0; i < MAX_ANALOG_PINS_SUPPORTED; i++) {
     the_analog_pins[i].pin_number = i;
-    the_analog_pins[i].pin_mode = AT_MODE_NOT_SET;
+    the_analog_pins[i].pin_mode = NOT_SET;
     the_analog_pins[i].reporting_enabled = false;
     the_analog_pins[i].last_value = -1;
     the_analog_pins[i].differential = 0;
@@ -1052,18 +908,59 @@ void setup() {
   // initialize the servo allocation map table
   init_pin_structures();
 
-  Serial.begin(1000000);
+  Serial.begin(115200);
 }
 
 void loop() {
   // keep processing incoming commands
   get_next_command();
-
+  static decltype(millis()) last_scan = 0;
+  static decltype(millis()) scan_delay = 10;
   if (!stop_reports) { // stop reporting
+        if (millis() - last_scan >= (scan_delay)) {
+        last_scan += scan_delay;
+
     scan_digital_inputs();
     scan_analog_inputs();
     scan_sonars();
     scan_dhts();
     scan_encoders();
+        }
   }
+}
+
+
+void feature_detection() {
+  // in message: [FEATURE_CHECK = 37, message_type_to_check]
+  // out message: [3, FEATURE_CHECK, 0/1]
+  std::array<uint8_t, 3> report_message = {FEATURE_CHECK, 0};
+  // byte report_message[3] = {2, FEATURE_CHECK, 0};
+  auto message_type = command_buffer[0];
+  if(command_table.size() <= message_type) {
+    report_message[2] = 0;
+  } else {
+    if(command_table[message_type] != nullptr) {
+      report_message[2] = 1;
+    } else {
+      report_message[2] = 0;
+    }
+  }
+  send_message(report_message);
+  }
+
+
+template <size_t N>
+void send_message(const std::array<uint8_t, N> &message) {
+  Serial.write(message.data(), N); // send msg len
+  for (auto i = 0u; i < N; i++) {
+    Serial.write(message[i]);
+  }
+}
+
+
+void get_unique_id() {
+  // in message: [GET_UNIQUE_ID = 6]
+  // out message: [REPORT_UNIQUE_ID = 6, id[0], id[1], id[2], id[3],id[4],id[5],id[6],id[7] ]
+  std::array<uint8_t, 6> report_message = {GET_UNIQUE_ID, 0}; // TODO: implement
+  send_message(report_message);
 }
