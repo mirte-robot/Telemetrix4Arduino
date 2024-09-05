@@ -62,7 +62,7 @@ TwoWire Wire2(SECOND_I2C_PORT_SDA, SECOND_I2C_PORT_SCL);
 // using command_descriptor = void *(void);
 typedef void (*command_descriptor)();
 // not implemented functions
-auto pwm_write = nullptr;
+// auto pwm_write = nullptr;
 // auto get_unique_id = nullptr;
 auto reset_board = nullptr;
 auto init_neo_pixels = nullptr;

@@ -13,7 +13,7 @@ extern void set_pin_mode();
 
 extern void digital_write();
 
-extern void analog_write();
+extern void pwm_write();
 
 extern void modify_reporting();
 
