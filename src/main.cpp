@@ -1,14 +1,14 @@
 // #include "Telemetrix4Arduino.h"
-#include <Arduino.h>
 #include "Telemetrix4Arduino.h"
+#include "commands.hpp"
+#include "i2c.hpp"
+#include <Arduino.h>
 #include <NewPing.h>
 #include <OpticalEncoder.h>
 #include <Servo.h>
 #include <Wire.h>
 #include <dhtnew.h>
 #include <vector>
-#include "commands.hpp"
-#include "i2c.hpp"
 /*
   Copyright (c) 2020 Alan Yorinks All rights reserved.
 
@@ -32,8 +32,7 @@
 #include "main.hpp"
 
 #include <array>
-template <size_t T>
-void send_message(const std::array<uint8_t, T> &message);
+template <size_t T> void send_message(const std::array<uint8_t, T> &message);
 
 // uncomment out the next line to create a 2nd i2c port
 //#define SECOND_I2C_PORT
@@ -52,7 +51,6 @@ TwoWire Wire2(SECOND_I2C_PORT_SDA, SECOND_I2C_PORT_SCL);
 // connect to a specific board regardless of the current com port
 // it is currently connected to.
 #define ARDUINO_ID 1
- 
 
 // When adding a new command update the command_table.
 // The command length is the number of bytes that follow
@@ -85,45 +83,44 @@ auto set_id = nullptr;
 // If you add new commands, make sure to extend the siz of this
 // array.
 std::vector<command_descriptor> command_table = {
-                                      {&serial_loopback}, // 0
-                                      {&set_pin_mode}, // 1
-                                      {&digital_write}, // 2, checked
-                                      {pwm_write }, // 3
-                                      {&modify_reporting}, // 4, checked
-                                      {&get_firmware_version}, // 5, checked
-                                      {&get_unique_id}, // 6, checked
-                                      {&servo_attach}, // 7
-                                      {&servo_write}, // 8
-                                      {&servo_detach}, // 9
-                                      {&i2c_begin},
-                                      {&i2c_read},
-                                      {&i2c_write},
-                                      {&sonar_new}, // 13, checked
-                                      {&dht_new},
-                                      {&stop_all_reports}, // 15, checked
-                                      {&enable_all_reports}, // 16, checked
-                                      {&reset_data},
-                                      {reset_board},
-                                      {init_neo_pixels},
-                                      {show_neo_pixels},
-                                      {set_neo_pixel},
-                                      {clear_all_neo_pixels},
-                                      {fill_neo_pixels},
-                                      {init_spi},
-                                      {write_blocking_spi},
-                                      {read_blocking_spi},
-                                      {set_format_spi},
-                                      {spi_cs_control},
-                                      {set_scan_delay},
-                                      {encoder_new}, // 30, checked
-                                      {sensor_new},
-                                      {ping}, // 32,  checked, not impelemented
-                                      {module_new},
-                                      {module_data},
-                                      {get_id},
-                                      {set_id},
-                                      {&feature_detection}
-                                      };
+    {&serial_loopback},      // 0
+    {&set_pin_mode},         // 1
+    {&digital_write},        // 2, checked
+    {pwm_write},             // 3
+    {&modify_reporting},     // 4, checked
+    {&get_firmware_version}, // 5, checked
+    {&get_unique_id},        // 6, checked
+    {&servo_attach},         // 7
+    {&servo_write},          // 8
+    {&servo_detach},         // 9
+    {&i2c_begin},
+    {&i2c_read},
+    {&i2c_write},
+    {&sonar_new}, // 13, checked
+    {&dht_new},
+    {&stop_all_reports},   // 15, checked
+    {&enable_all_reports}, // 16, checked
+    {&reset_data},
+    {reset_board},
+    {init_neo_pixels},
+    {show_neo_pixels},
+    {set_neo_pixel},
+    {clear_all_neo_pixels},
+    {fill_neo_pixels},
+    {init_spi},
+    {write_blocking_spi},
+    {read_blocking_spi},
+    {set_format_spi},
+    {spi_cs_control},
+    {set_scan_delay},
+    {encoder_new}, // 30, checked
+    {sensor_new},
+    {ping}, // 32,  checked, not impelemented
+    {module_new},
+    {module_data},
+    {get_id},
+    {set_id},
+    {&feature_detection}};
 
 // Input pin reporting control sub commands (modify_reporting)
 #define REPORTING_DISABLE_ALL 0
@@ -131,7 +128,6 @@ std::vector<command_descriptor> command_table = {
 #define REPORTING_DIGITAL_ENABLE 2
 #define REPORTING_ANALOG_DISABLE 3
 #define REPORTING_DIGITAL_DISABLE 4
-
 
 // Pin mode definitions
 
@@ -352,11 +348,13 @@ void set_pin_mode() {
     the_digital_pins[pin].pin_mode = mode;
     the_digital_pins[pin].reporting_enabled = command_buffer[2];
     the_digital_pins[pin].last_value = -1;
-    #ifndef INPUT_PULLDOWN // for boards that do not support INPUT_PULLDOWN, fall back to INPUT
-    #define INPUT_PULLDOWN INPUT
-    #endif
+#ifndef INPUT_PULLDOWN // for boards that do not support INPUT_PULLDOWN, fall
+                       // back to INPUT
+#define INPUT_PULLDOWN INPUT
+#endif
     pinMode(pin, INPUT_PULLDOWN);
-    break;  case INPUT_MODE: //[SET_PIN_MODE = 1, pin, digital_in_type, report_enable]
+    break;
+  case INPUT_MODE: //[SET_PIN_MODE = 1, pin, digital_in_type, report_enable]
     the_digital_pins[pin].pin_mode = mode;
     the_digital_pins[pin].reporting_enabled = command_buffer[2];
     the_digital_pins[pin].last_value = -1;
@@ -372,7 +370,8 @@ void set_pin_mode() {
     the_digital_pins[pin].pin_mode = mode;
     pinMode(pin, OUTPUT);
     break;
-  case ANALOG_INPUT: // [SET_PIN_MODE = 1, adc_pin, ANALOG_IN = 5, diff_high, diff_low, report_enable ]
+  case ANALOG_INPUT: // [SET_PIN_MODE = 1, adc_pin, ANALOG_IN = 5, diff_high,
+                     // diff_low, report_enable ]
     the_analog_pins[pin].pin_mode = mode;
     the_analog_pins[pin].differential =
         (command_buffer[2] << 8) + command_buffer[3];
@@ -381,7 +380,7 @@ void set_pin_mode() {
     break;
   case PWM:
 
-  break;
+    break;
   default:
     break;
   }
@@ -532,14 +531,14 @@ void servo_detach() {
 
 void sonar_new() {
   // [SONAR_NEW = 13, trigger_pin, echo_pin]
-  if(sonars_index >= MAX_SONARS) {
+  if (sonars_index >= MAX_SONARS) {
     return;
   }
   sonars[sonars_index].usonic =
       new NewPing((uint8_t)command_buffer[0], (uint8_t)command_buffer[1], 400);
   sonars[sonars_index].trigger_pin = command_buffer[0];
   sonars_index++; // next index, so it is the number of sonars
-  sonar_scan_interval = 100/sonars_index; // always scan all sonars in 100ms
+  sonar_scan_interval = 100 / sonars_index; // always scan all sonars in 100ms
 }
 
 /***********************************
@@ -590,8 +589,7 @@ void encoder_new() {
   auto pinA = command_buffer[1];
   optEnc[optEncoder_ix].optEnc_sensor = new OpticalEncoder();
   intCB callbackMethod = interruptMap[optEncoder_ix];
-  optEnc[optEncoder_ix].optEnc_sensor->setup(
-      pinA, callbackMethod, 0, 0);
+  optEnc[optEncoder_ix].optEnc_sensor->setup(pinA, callbackMethod, 0, 0);
   optEnc[optEncoder_ix].pin = pinA;
   optEncoder_ix++;
 }
@@ -630,8 +628,8 @@ void get_next_command() {
   // get the command byte
   command = (byte)Serial.read();
 
-  if(command >= command_table.size()) { // discard the command
-    for(auto i = 0; i < packet_length - 1; i++) {
+  if (command >= command_table.size()) { // discard the command
+    for (auto i = 0; i < packet_length - 1; i++) {
       while (!Serial.available()) {
         delay(1);
       }
@@ -668,7 +666,8 @@ void scan_digital_inputs() {
 
   for (int i = 0; i < MAX_DIGITAL_PINS_SUPPORTED; i++) {
     if (the_digital_pins[i].pin_mode == INPUT_MODE ||
-        the_digital_pins[i].pin_mode == INPUT_PULL_UP || the_digital_pins[i].pin_mode == INPUT_PULL_DOWN) {
+        the_digital_pins[i].pin_mode == INPUT_PULL_UP ||
+        the_digital_pins[i].pin_mode == INPUT_PULL_DOWN) {
       if (the_digital_pins[i].reporting_enabled) {
         // if the value changed since last read
         value = (byte)digitalRead(the_digital_pins[i].pin_number);
@@ -694,7 +693,6 @@ void scan_analog_inputs() {
   // byte 3 = high order byte of value
   // byte 4 = low order byte of value
   // [ANALOG_REPORT = 3, adc_pin, value_high, value_low]
-
 
   byte report_message[5] = {4, ANALOG_REPORT, 0, 0, 0};
   uint8_t adjusted_pin_number;
@@ -742,7 +740,7 @@ void scan_sonars() {
 
         byte report_message[5] = {
             4, SONAR_DISTANCE, sonars[last_sonar_visited].trigger_pin,
-            (byte)(distance/100), (byte)(distance % 100)};
+            (byte)(distance / 100), (byte)(distance % 100)};
         Serial.write(report_message, 5);
       }
       last_sonar_visited++;
@@ -827,20 +825,19 @@ void scan_encoders() {
   long optEnc_return_val = 0;
 
   if (optEncoder_ix) {
-  
-      for (int i = 0; i < optEncoder_ix; ++i) {
-        auto enc = optEnc[i].optEnc_sensor;
-        optEnc_return_val = enc->getPosition();
 
-        if (optEnc_return_val != 0) {
-          enc->resetPosition();
-           report_message[2] = optEnc[i].pin;
-            report_message[3] = optEnc_return_val & 0xFF;
+    for (int i = 0; i < optEncoder_ix; ++i) {
+      auto enc = optEnc[i].optEnc_sensor;
+      optEnc_return_val = enc->getPosition();
 
-          Serial.write(report_message, 4);
-        }
+      if (optEnc_return_val != 0) {
+        enc->resetPosition();
+        report_message[2] = optEnc[i].pin;
+        report_message[3] = optEnc_return_val & 0xFF;
+
+        Serial.write(report_message, 4);
       }
-    
+    }
   }
 }
 
@@ -919,18 +916,17 @@ void loop() {
   static decltype(millis()) last_scan = 0;
   static decltype(millis()) scan_delay = 10;
   if (!stop_reports) { // stop reporting
-        if (millis() - last_scan >= (scan_delay)) {
-        last_scan += scan_delay;
+    if (millis() - last_scan >= (scan_delay)) {
+      last_scan += scan_delay;
 
-    scan_digital_inputs();
-    scan_analog_inputs();
-    scan_sonars();
-    scan_dhts();
-    scan_encoders();
-        }
+      scan_digital_inputs();
+      scan_analog_inputs();
+      scan_sonars();
+      scan_dhts();
+      scan_encoders();
+    }
   }
 }
-
 
 void feature_detection() {
   // in message: [FEATURE_CHECK = 37, message_type_to_check]
@@ -938,31 +934,29 @@ void feature_detection() {
   std::array<uint8_t, 3> report_message = {FEATURE_CHECK, 0};
   // byte report_message[3] = {2, FEATURE_CHECK, 0};
   auto message_type = command_buffer[0];
-  if(command_table.size() <= message_type) {
+  if (command_table.size() <= message_type) {
     report_message[2] = 0;
   } else {
-    if(command_table[message_type] != nullptr) {
+    if (command_table[message_type] != nullptr) {
       report_message[2] = 1;
     } else {
       report_message[2] = 0;
     }
   }
   send_message(report_message);
-  }
+}
 
-
-template <size_t N>
-void send_message(const std::array<uint8_t, N> &message) {
+template <size_t N> void send_message(const std::array<uint8_t, N> &message) {
   Serial.write(message.data(), N); // send msg len
   for (auto i = 0u; i < N; i++) {
     Serial.write(message[i]);
   }
 }
 
-
 void get_unique_id() {
   // in message: [GET_UNIQUE_ID = 6]
-  // out message: [REPORT_UNIQUE_ID = 6, id[0], id[1], id[2], id[3],id[4],id[5],id[6],id[7] ]
+  // out message: [REPORT_UNIQUE_ID = 6, id[0], id[1], id[2],
+  // id[3],id[4],id[5],id[6],id[7] ]
   std::array<uint8_t, 6> report_message = {GET_UNIQUE_ID, 0}; // TODO: implement
   send_message(report_message);
 }

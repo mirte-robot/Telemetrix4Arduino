@@ -1,10 +1,8 @@
 #pragma once
 
-
 #include <Arduino.h>
 
 void get_unique_id();
-
 
 // Old code
 extern void serial_loopback();
@@ -27,7 +25,6 @@ extern void servo_write();
 
 extern void servo_detach();
 
-
 extern void sonar_new();
 
 extern void dht_new();
@@ -45,7 +42,6 @@ extern void reset_data();
 extern void init_pin_structures();
 
 void feature_detection();
-
 
 enum PIN_MODES : uint8_t {
   NOT_SET = 255,

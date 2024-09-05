@@ -1,8 +1,8 @@
-#include <Arduino.h>
-#include "Telemetrix4Arduino.h"
-#include <Wire.h>
 #include "i2c.hpp"
+#include "Telemetrix4Arduino.h"
 #include "commands.hpp"
+#include <Arduino.h>
+#include <Wire.h>
 
 /***********************************
    i2c functions
@@ -30,7 +30,7 @@ void i2c_begin() {
 }
 
 void i2c_read() {
-    TwoWire *current_i2c_port;
+  TwoWire *current_i2c_port;
 
   // data in the incoming message:
   // address, [0]
@@ -55,7 +55,7 @@ void i2c_read() {
     current_i2c_port = &Wire2;
   }
 #endif
-uint8_t i2c_report_message[64];
+  uint8_t i2c_report_message[64];
 
   current_i2c_port->beginTransmission(address);
   current_i2c_port->write((byte)the_register);
@@ -73,7 +73,7 @@ uint8_t i2c_report_message[64];
     Serial.write(i2c_report_message, I2C_ERROR_REPORT_LENGTH);
     return;
   }
-for (int i = 0; i < bytes; i++) {
+  for (int i = 0; i < bytes; i++) {
     i2c_report_message[i + I2C_READ_START_OF_DATA] = current_i2c_port->read();
   }
   // length of the packet
@@ -94,8 +94,7 @@ for (int i = 0; i < bytes; i++) {
       command_buffer[I2C_READ_REGISTER];
 
   // number of bytes read from i2c device
-  i2c_report_message[I2C_REPORT_READ_NUMBER_DATA_BYTES] =
-      (uint8_t)bytes;
+  i2c_report_message[I2C_REPORT_READ_NUMBER_DATA_BYTES] = (uint8_t)bytes;
 
   i2c_report_message[I2C_READ_MESSAGE_ID] = message_id;
 
@@ -105,7 +104,7 @@ for (int i = 0; i < bytes; i++) {
 }
 
 void i2c_write() {
-    TwoWire *current_i2c_port;
+  TwoWire *current_i2c_port;
 
   // command_buffer[0] is the number of bytes to send
   // command_buffer[1] is the device address

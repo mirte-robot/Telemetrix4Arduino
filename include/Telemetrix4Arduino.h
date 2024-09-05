@@ -6,5 +6,4 @@
 
 extern uint8_t command_buffer[MAX_COMMAND_LENGTH];
 
-template <size_t N>
-void send_message(const std::array<uint8_t, N> &message);
+template <size_t N> void send_message(const std::array<uint8_t, N> &message);
