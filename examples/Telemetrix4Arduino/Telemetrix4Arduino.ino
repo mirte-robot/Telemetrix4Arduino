@@ -357,7 +357,7 @@ intCB interruptMap[MAX_ENCODERS] = {
 
 unsigned long optenc_current_millis;      // for analog input loop
 unsigned long optenc_previous_millis;     // for analog input loop
-unsigned int optenc_scan_interval = 0; // scan encoders every x ms
+unsigned int optenc_scan_interval = 10; // scan encoders every x ms
 
 // buffer to hold incoming command data
 byte command_buffer[MAX_COMMAND_LENGTH];
@@ -1102,9 +1102,9 @@ void reset_data() {
 
   // Reset optical encoder timers and index
   optEncoder_ix = 0;
-  optenc_current_millis = 0;      // for analog input loop
-  optenc_previous_millis = 0;     // for analog input loop
-  optenc_scan_interval = 0; // scan encoders every x ms
+  optenc_current_millis = 0;      // for encoder input loop
+  optenc_previous_millis = millis();     // for encoder input loop
+  optenc_scan_interval = 10; // scan encoders every x ms
 
   init_pin_structures();
 
