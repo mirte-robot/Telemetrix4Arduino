@@ -39,7 +39,7 @@ public:
       this->stop = true;
     }
   }
-  void resetSensor(){};
+  void resetSensor() {};
   static Sensor *create(uint8_t *data, size_t size) {
     if (size < 1) {
       return nullptr; // Not enough data to create sensor

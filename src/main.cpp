@@ -341,6 +341,10 @@ void set_pin_mode() {
   PIN_MODES mode;
   pin = command_buffer[0];
   mode = (PIN_MODES)command_buffer[1];
+  if (pin > MAX_PINS_SUPPORTED) {
+    // led pin (pin 200) is already setup as output anyway.
+    return;
+  }
   // Serial2.println("Setting pin mode: " + String(pin) + " to " +
   //  String(mode));
   switch (mode) {
@@ -397,6 +401,9 @@ void digital_write() {
   byte value;
   pin = command_buffer[0];
   value = command_buffer[1];
+  if (pin == 200) {
+    pin = LED_BUILTIN;
+  }
   digitalWrite(pin, value);
 }
 
@@ -411,6 +418,9 @@ void pwm_write() {
 
   value = (command_buffer[1] << 8) + command_buffer[2];
 
+  if (pin == 200) {
+    pin = LED_BUILTIN;
+  }
   send_debug_info(3, pin);
   send_debug_info(4, value);
   analogWrite(pin, value);
